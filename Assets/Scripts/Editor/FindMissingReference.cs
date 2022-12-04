@@ -27,67 +27,124 @@ namespace Tools.FindMissingReference
         private void ScanProject()
         {
             var guids = AssetDatabase.FindAssets("t:Prefab");
-            CheckPrefabs(guids.Select(AssetDatabase.GUIDToAssetPath).Select(x => new DatabasePrefab
-                { Path = x, Prefab = PrefabUtility.LoadPrefabContents(x) }).ToList());
+            var prefabs = guids
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(x => new PrefabContextObject(PrefabUtility.LoadPrefabContents(x), x))
+                .ToList();
+            CheckPrefabs(prefabs);
         }
 
-        private void CheckPrefabs(List<DatabasePrefab> prefabs)
+        private void CheckPrefabs(List<PrefabContextObject> prefabs)
         {
             foreach (var prefab in prefabs)
             {
-                FindMissingPrefabs(prefab.Prefab, prefab.Path, true);
+                FindMissingPrefabs(prefab, true);
             }
         }
 
-        private void FindMissingPrefabs(GameObject prefab, string prefabName, bool isRoot)
+        private void FindMissingPrefabs(PrefabContextObject prefab, bool isRoot)
         {
-            if (prefab == null)
+            FindMissingReferences(prefab, true);
+            if (prefab.GameObject == null)
             {
                 return;
             }
 
-            if (prefab.name.Contains("Missing Prefab"))
+            if (prefab.GameObject.name.Contains("Missing Prefab"))
             {
-                Debug.LogError($"<b>{prefabName}</b> has missing prefab {prefab.name}");
+                Debug.LogError($"<b>{prefab.ContextPath}</b> has missing prefab {prefab.GameObject.name}");
                 return;
             }
 
-            if (PrefabUtility.IsPrefabAssetMissing(prefab))
+            if (PrefabUtility.IsPrefabAssetMissing(prefab.GameObject))
             {
-                Debug.LogError($"<b>{prefabName}</b> has missing prefab {prefab.name}");
+                Debug.LogError($"<b>{prefab.ContextPath}</b> has missing prefab {prefab.GameObject.name}");
                 return;
             }
 
-            if (PrefabUtility.IsDisconnectedFromPrefabAsset(prefab))
+            if (PrefabUtility.IsDisconnectedFromPrefabAsset(prefab.GameObject))
             {
-                Debug.LogError($"<b>{prefabName}</b> has missing prefab {prefab.name}");
+                Debug.LogError($"<b>{prefab.ContextPath}</b> has missing prefab {prefab.GameObject.name}");
                 return;
             }
 
             if (!isRoot)
             {
-                if (PrefabUtility.IsAnyPrefabInstanceRoot(prefab))
+                if (PrefabUtility.IsAnyPrefabInstanceRoot(prefab.GameObject))
                 {
                     return;
                 }
 
-                GameObject root = PrefabUtility.GetNearestPrefabInstanceRoot(prefab);
-                if (root == prefab)
+                GameObject root = PrefabUtility.GetNearestPrefabInstanceRoot(prefab.GameObject);
+                if (root == prefab.GameObject)
                 {
                     return;
                 }
             }
 
-            foreach (Transform childT in prefab.transform)
+            foreach (Transform childT in prefab.GameObject.transform)
             {
-                FindMissingPrefabs(childT.gameObject, prefabName, false);
+                FindMissingPrefabs(new PrefabContextObject(childT.gameObject, prefab.ContextPath), false);
             }
+        }
+
+        private void FindMissingReferences(PrefabContextObject prefab, bool findInChildren = false)
+        {
+            var components = prefab.GameObject.GetComponents<Component>();
+
+            for (var j = 0; j<components.Length; j++)
+            {
+                var c = components[j];
+                if (!c)
+                {
+                    Debug.LogError($"Missing Component in GameObject: {FullPath(prefab.GameObject)} in {prefab.ContextPath}", prefab.GameObject);
+                    continue;
+                }
+                
+                var property = new SerializedObject(c).GetIterator();
+
+                while (property.NextVisible(true))
+                {
+                    if (property.propertyType == SerializedPropertyType.ObjectReference)
+                    {
+                        if (property.objectReferenceValue == null
+                            && property.objectReferenceInstanceIDValue != 0)
+                        {
+                            Debug.LogError(
+                                $"<b>{prefab.ContextPath}</b> has missing reference! " +
+                                $"Component: <b>{c.GetType().Name}</b>, " +
+                                $"Property: {ObjectNames.NicifyVariableName(property.name)}",
+                                prefab.GameObject);
+                        }
+                    }
+                }
+            }
+
+            if (findInChildren)
+            {
+                foreach (Transform child in prefab.GameObject.transform)
+                {
+                    FindMissingReferences(new PrefabContextObject(child.gameObject, prefab.ContextPath), true);
+                }
+            }
+        }
+
+        private string FullPath(GameObject go)
+        {
+            var parent = go.transform.parent;
+            return parent == null ? go.name : FullPath(parent.gameObject) + "/" + go.name;
         }
     }
 
-    public class DatabasePrefab
+    public class PrefabContextObject
     {
-        public string Path;
-        public GameObject Prefab;
+        public string ContextPath;
+        public GameObject GameObject;
+
+        public PrefabContextObject(GameObject go, string contextPath)
+        {
+            GameObject = go;
+            ContextPath = contextPath;
+        }
     }
 }
