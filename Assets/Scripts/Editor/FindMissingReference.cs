@@ -38,7 +38,14 @@ namespace Tools.FindMissingReference
         {
             foreach (var prefab in prefabs)
             {
-                FindMissingPrefabs(prefab, true);
+                try
+                {
+                    FindMissingPrefabs(prefab, true);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
             }
         }
 
@@ -105,17 +112,14 @@ namespace Tools.FindMissingReference
 
                 while (property.NextVisible(true))
                 {
-                    if (property.propertyType == SerializedPropertyType.ObjectReference)
+                    if (property.propertyType == SerializedPropertyType.ObjectReference &&
+                        property.objectReferenceValue == null && property.objectReferenceInstanceIDValue != 0)
                     {
-                        if (property.objectReferenceValue == null
-                            && property.objectReferenceInstanceIDValue != 0)
-                        {
-                            Debug.LogError(
-                                $"<b>{prefab.ContextPath}</b> has missing reference! " +
-                                $"Component: <b>{c.GetType().Name}</b>, " +
-                                $"Property: {ObjectNames.NicifyVariableName(property.name)}",
-                                prefab.GameObject);
-                        }
+                        Debug.LogError(
+                            $"<b>{prefab.ContextPath}</b> has missing reference! " +
+                            $"Component: <b>{c.GetType().Name}</b>, " +
+                            $"Property: {ObjectNames.NicifyVariableName(property.name)}",
+                            prefab.GameObject);
                     }
                 }
             }
