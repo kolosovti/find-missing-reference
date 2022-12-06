@@ -17,7 +17,8 @@
 - Поиск missing ссылок осуществляется с помощью SerializedObject/SerializedProperty, которые созданы для работы с компонентами в «общем виде», без привязки к конкретной реализации. Других способов я не нашёл, в голову приходит только идея вручную писать хэндлеры для проверки полей каждого нужного нам класса.
 
 ### Скриншоты
-![Стартовое окно](https://github.com/kolosovti/find-missing-reference/raw/master/Documentation/Images/startup-window.png)
 > Стартовое окно
-![Результат выполнения](https://github.com/kolosovti/find-missing-reference/raw/master/Documentation/Images/result-window.png)
+![Стартовое окно](https://github.com/kolosovti/find-missing-reference/raw/master/Documentation/Images/startup-window.png)
+
 > Результат выполнения
+![Результат выполнения](https://github.com/kolosovti/find-missing-reference/raw/master/Documentation/Images/result-window.png)
