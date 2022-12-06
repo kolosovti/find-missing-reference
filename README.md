@@ -18,4 +18,6 @@
 
 ### Скриншоты
 ![Стартовое окно](https://github.com/kolosovti/find-missing-reference/raw/master/Documentation/Images/startup-window.png)
+> Стартовое окно
 ![Результат выполнения](https://github.com/kolosovti/find-missing-reference/raw/master/Documentation/Images/result-window.png)
+> Результат выполнения
