@@ -99,15 +99,16 @@ namespace Tools.FindMissingReference
                     continue;
                 }
 
-                var property = new SerializedObject(c).GetIterator();
+                var properties = new SerializedObject(c).GetIterator();
 
-                while (property.NextVisible(true))
+                while (properties.NextVisible(true))
                 {
-                    if (property.propertyType == SerializedPropertyType.ObjectReference &&
-                        property.objectReferenceValue == null && property.objectReferenceInstanceIDValue != 0)
+                    if (properties.propertyType == SerializedPropertyType.ObjectReference &&
+                        properties.objectReferenceValue == null && properties.objectReferenceInstanceIDValue != 0)
                     {
                         brokenPrefabs.Add(new BrokenPrefab(prefab.GameObject,
-                            $"Missing reference in <b>{prefab.ContextPath}</b>\nComponent: <b>{c.GetType().Name}</b>\nProperty: <b>{ObjectNames.NicifyVariableName(property.name)}</b>"));
+                            $"Missing reference in <b>{prefab.ContextPath}</b>\nComponent: <b>{c.GetType().Name}</b>\n" +
+                            $"Property: <b>{ObjectNames.NicifyVariableName(properties.name)}</b>"));
                     }
                 }
             }

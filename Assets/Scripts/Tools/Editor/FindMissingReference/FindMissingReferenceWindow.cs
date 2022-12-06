@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
 
@@ -9,11 +8,11 @@ namespace Tools.FindMissingReference
 {
     public class FindMissingReferenceWindow : EditorWindow
     {
-        [SerializeField, NonReorderable] private List<BrokenPrefab> _brokenPrefabs = new List<BrokenPrefab>();
         private readonly float _space = 5f;
+        [SerializeField, NonReorderable] private List<BrokenPrefab> _brokenPrefabs = new List<BrokenPrefab>();
+        private int _page;
+        private readonly int _pageSize = 50;
         private Vector2 _scrollPosition;
-        private int _page = 0;
-        private int _pageSize = 50;
 
         [MenuItem("Tools/Find Missing Prefabs")]
         public static void ShowWindow()
@@ -133,7 +132,8 @@ namespace Tools.FindMissingReference
                     fontSize = 12,
                     alignment = TextAnchor.MiddleCenter
                 };
-                EditorGUI.LabelField(pageInfoRect, $"Page {_page + 1}/{(_brokenPrefabs.Count / _pageSize) + 1}", pageStyle);
+                EditorGUI.LabelField(pageInfoRect, $"Page {_page + 1}/{_brokenPrefabs.Count / _pageSize + 1}",
+                    pageStyle);
 
                 int latestElement;
                 if (serializedProperty.arraySize > (_page + 1) * _pageSize)
@@ -207,7 +207,8 @@ namespace Tools.FindMissingReference
             prefabRect.width = prefabRect.height * 2;
             prefabRect.x += space;
             prefabRect.y += space;
-            EditorGUI.PropertyField(prefabRect, human.FindPropertyRelative(nameof(BrokenPrefab.Prefab)), GUIContent.none);
+            EditorGUI.PropertyField(prefabRect, human.FindPropertyRelative(nameof(BrokenPrefab.Prefab)),
+                GUIContent.none);
 
             var logRect = propertyRect;
             logRect.width -= prefabRect.width + space * 3;
