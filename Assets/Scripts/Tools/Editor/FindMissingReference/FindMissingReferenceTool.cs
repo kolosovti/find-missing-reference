@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -7,40 +6,26 @@ using UnityEngine;
 
 namespace Tools.FindMissingReference
 {
-    public class FindMissingReferenceWindow : EditorWindow
+    public class FindMissingReferenceTool
     {
-        [MenuItem("Tools/Find Missing Prefabs")]
-        public static void ShowWindow()
-        {
-            GetWindow(typeof(FindMissingReferenceWindow));
-        }
-
-        private void OnGUI()
-        {
-            GUILayout.Label("Find Missing Reference", EditorStyles.largeLabel);
-            if (GUILayout.Button("Scan Project Assets"))
-            {
-                ScanProject();
-            }
-        }
-
-        private void ScanProject()
+        public void ScanProject(ref List<BrokenPrefab> brokenPrefabs)
         {
             var guids = AssetDatabase.FindAssets("t:Prefab");
             var prefabs = guids
                 .Select(AssetDatabase.GUIDToAssetPath)
-                .Select(x => new PrefabContextObject(PrefabUtility.LoadPrefabContents(x), x))
+                .Select(x =>
+                    new PrefabContextObject(AssetDatabase.LoadAssetAtPath(x, typeof(GameObject)) as GameObject, x))
                 .ToList();
-            CheckPrefabs(prefabs);
+            CheckPrefabs(prefabs, ref brokenPrefabs);
         }
 
-        private void CheckPrefabs(List<PrefabContextObject> prefabs)
+        private void CheckPrefabs(List<PrefabContextObject> prefabs, ref List<BrokenPrefab> brokenPrefabs)
         {
             foreach (var prefab in prefabs)
             {
                 try
                 {
-                    FindMissingPrefabs(prefab, true);
+                    FindMissingPrefabs(prefab, true, ref brokenPrefabs);
                 }
                 catch (Exception e)
                 {
@@ -49,9 +34,9 @@ namespace Tools.FindMissingReference
             }
         }
 
-        private void FindMissingPrefabs(PrefabContextObject prefab, bool isRoot)
+        private void FindMissingPrefabs(PrefabContextObject prefab, bool isRoot, ref List<BrokenPrefab> brokenPrefabs)
         {
-            FindMissingReferences(prefab, true);
+            FindMissingReferences(prefab, true, ref brokenPrefabs);
             if (prefab.GameObject == null)
             {
                 return;
@@ -59,19 +44,22 @@ namespace Tools.FindMissingReference
 
             if (prefab.GameObject.name.Contains("Missing Prefab"))
             {
-                Debug.LogError($"<b>{prefab.ContextPath}</b> has missing prefab {prefab.GameObject.name}");
+                brokenPrefabs.Add(new BrokenPrefab(prefab.GameObject,
+                    $"Missing prefab in <b>{prefab.ContextPath}</b>\nPrefab: <b>{prefab.GameObject.name}</b>"));
                 return;
             }
 
             if (PrefabUtility.IsPrefabAssetMissing(prefab.GameObject))
             {
-                Debug.LogError($"<b>{prefab.ContextPath}</b> has missing prefab {prefab.GameObject.name}");
+                brokenPrefabs.Add(new BrokenPrefab(prefab.GameObject,
+                    $"Missing prefab in <b>{prefab.ContextPath}</b>\nPrefab: <b>{prefab.GameObject.name}</b>"));
                 return;
             }
 
             if (PrefabUtility.IsDisconnectedFromPrefabAsset(prefab.GameObject))
             {
-                Debug.LogError($"<b>{prefab.ContextPath}</b> has missing prefab {prefab.GameObject.name}");
+                brokenPrefabs.Add(new BrokenPrefab(prefab.GameObject,
+                    $"Missing prefab in <b>{prefab.ContextPath}</b>\nPrefab: <b>{prefab.GameObject.name}</b>"));
                 return;
             }
 
@@ -82,7 +70,7 @@ namespace Tools.FindMissingReference
                     return;
                 }
 
-                GameObject root = PrefabUtility.GetNearestPrefabInstanceRoot(prefab.GameObject);
+                var root = PrefabUtility.GetNearestPrefabInstanceRoot(prefab.GameObject);
                 if (root == prefab.GameObject)
                 {
                     return;
@@ -91,23 +79,26 @@ namespace Tools.FindMissingReference
 
             foreach (Transform childT in prefab.GameObject.transform)
             {
-                FindMissingPrefabs(new PrefabContextObject(childT.gameObject, prefab.ContextPath), false);
+                FindMissingPrefabs(new PrefabContextObject(childT.gameObject, prefab.ContextPath), false,
+                    ref brokenPrefabs);
             }
         }
 
-        private void FindMissingReferences(PrefabContextObject prefab, bool findInChildren = false)
+        private void FindMissingReferences(PrefabContextObject prefab, bool findInChildren,
+            ref List<BrokenPrefab> brokenPrefabs)
         {
             var components = prefab.GameObject.GetComponents<Component>();
 
-            for (var j = 0; j<components.Length; j++)
+            for (var j = 0; j < components.Length; j++)
             {
                 var c = components[j];
                 if (!c)
                 {
-                    Debug.LogError($"Missing Component in GameObject: {FullPath(prefab.GameObject)} in {prefab.ContextPath}", prefab.GameObject);
+                    brokenPrefabs.Add(new BrokenPrefab(prefab.GameObject,
+                        $"Missing Component in <b>{prefab.ContextPath}</b>\nGameObject: <b>{FullPath(prefab.GameObject)}</b>"));
                     continue;
                 }
-                
+
                 var property = new SerializedObject(c).GetIterator();
 
                 while (property.NextVisible(true))
@@ -115,11 +106,8 @@ namespace Tools.FindMissingReference
                     if (property.propertyType == SerializedPropertyType.ObjectReference &&
                         property.objectReferenceValue == null && property.objectReferenceInstanceIDValue != 0)
                     {
-                        Debug.LogError(
-                            $"<b>{prefab.ContextPath}</b> has missing reference! " +
-                            $"Component: <b>{c.GetType().Name}</b>, " +
-                            $"Property: {ObjectNames.NicifyVariableName(property.name)}",
-                            prefab.GameObject);
+                        brokenPrefabs.Add(new BrokenPrefab(prefab.GameObject,
+                            $"Missing reference in <b>{prefab.ContextPath}</b>\nComponent: <b>{c.GetType().Name}</b>\nProperty: <b>{ObjectNames.NicifyVariableName(property.name)}</b>"));
                     }
                 }
             }
@@ -128,7 +116,8 @@ namespace Tools.FindMissingReference
             {
                 foreach (Transform child in prefab.GameObject.transform)
                 {
-                    FindMissingReferences(new PrefabContextObject(child.gameObject, prefab.ContextPath), true);
+                    FindMissingReferences(new PrefabContextObject(child.gameObject, prefab.ContextPath), true,
+                        ref brokenPrefabs);
                 }
             }
         }
