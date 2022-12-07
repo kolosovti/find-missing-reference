@@ -16,6 +16,9 @@
 - Поиск префабов можно осуществлять с помощью AssetDatabase, либо QuickSearch. Выбран AssetDatabase, так как в Unity 2020 QuickSearch требует писать собственные SearchContext и SearchProvider, это оверинжиниринг для данной задачи. Кроме того, AssetDatabase производительней, чем QuickSearch (как я понял, потому что в основе QuickSearch лежит получение всех ассетов с помощью AssetDatabase, поверх чего уже применяются поисковые выражения SearchProvider'а)
 - Поиск missing ссылок осуществляется с помощью SerializedObject/SerializedProperty, которые созданы для работы с компонентами в «общем виде», без привязки к конкретной реализации. Других способов я не нашёл, в голову приходит только идея вручную писать хэндлеры для проверки полей каждого нужного нам класса.
 
+### Примечания
+- Не реализован поиск missing ссылок на сценах
+
 ### Скриншоты
 > Стартовое окно
 ![Стартовое окно](https://github.com/kolosovti/find-missing-reference/raw/master/Documentation/Images/startup-window.png)
