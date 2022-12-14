@@ -9,7 +9,7 @@ namespace Tools.FindMissingReference
     public class FindMissingReferenceWindow : EditorWindow
     {
         private readonly float _space = 5f;
-        [SerializeField, NonReorderable] private List<BrokenPrefab> _brokenPrefabs = new List<BrokenPrefab>();
+        [SerializeField] private List<BrokenPrefab> _brokenPrefabs = new List<BrokenPrefab>();
         private int _page;
         private readonly int _pageSize = 50;
         private Vector2 _scrollPosition;
@@ -64,7 +64,7 @@ namespace Tools.FindMissingReference
                 }
 
                 var tool = new FindMissingReferenceTool();
-                tool.ScanProject(ref _brokenPrefabs);
+                tool.ScanProject(_brokenPrefabs);
             }
 
             GUILayout.Space(120f);

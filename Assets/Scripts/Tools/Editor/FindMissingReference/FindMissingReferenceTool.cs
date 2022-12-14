@@ -8,7 +8,7 @@ namespace Tools.FindMissingReference
 {
     public class FindMissingReferenceTool
     {
-        public void ScanProject(ref List<BrokenPrefab> brokenPrefabs)
+        public void ScanProject(List<BrokenPrefab> brokenPrefabs)
         {
             var guids = AssetDatabase.FindAssets("t:Prefab");
             var prefabs = guids
@@ -16,16 +16,16 @@ namespace Tools.FindMissingReference
                 .Select(x =>
                     new PrefabContextObject(AssetDatabase.LoadAssetAtPath(x, typeof(GameObject)) as GameObject, x))
                 .ToList();
-            CheckPrefabs(prefabs, ref brokenPrefabs);
+            CheckPrefabs(prefabs, brokenPrefabs);
         }
 
-        private void CheckPrefabs(List<PrefabContextObject> prefabs, ref List<BrokenPrefab> brokenPrefabs)
+        private void CheckPrefabs(List<PrefabContextObject> prefabs, List<BrokenPrefab> brokenPrefabs)
         {
             foreach (var prefab in prefabs)
             {
                 try
                 {
-                    FindMissingPrefabs(prefab, true, ref brokenPrefabs);
+                    FindMissingPrefabs(prefab, true, brokenPrefabs);
                 }
                 catch (Exception e)
                 {
@@ -34,9 +34,9 @@ namespace Tools.FindMissingReference
             }
         }
 
-        private void FindMissingPrefabs(PrefabContextObject prefab, bool isRoot, ref List<BrokenPrefab> brokenPrefabs)
+        private void FindMissingPrefabs(PrefabContextObject prefab, bool isRoot, List<BrokenPrefab> brokenPrefabs)
         {
-            FindMissingReferences(prefab, true, ref brokenPrefabs);
+            FindMissingReferences(prefab, true, brokenPrefabs);
             if (prefab.GameObject == null)
             {
                 return;
@@ -80,12 +80,11 @@ namespace Tools.FindMissingReference
             foreach (Transform childT in prefab.GameObject.transform)
             {
                 FindMissingPrefabs(new PrefabContextObject(childT.gameObject, prefab.ContextPath), false,
-                    ref brokenPrefabs);
+                    brokenPrefabs);
             }
         }
 
-        private void FindMissingReferences(PrefabContextObject prefab, bool findInChildren,
-            ref List<BrokenPrefab> brokenPrefabs)
+        private void FindMissingReferences(PrefabContextObject prefab, bool findInChildren, List<BrokenPrefab> brokenPrefabs)
         {
             var components = prefab.GameObject.GetComponents<Component>();
 
@@ -117,8 +116,7 @@ namespace Tools.FindMissingReference
             {
                 foreach (Transform child in prefab.GameObject.transform)
                 {
-                    FindMissingReferences(new PrefabContextObject(child.gameObject, prefab.ContextPath), true,
-                        ref brokenPrefabs);
+                    FindMissingReferences(new PrefabContextObject(child.gameObject, prefab.ContextPath), true, brokenPrefabs);
                 }
             }
         }
